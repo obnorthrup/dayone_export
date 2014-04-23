@@ -52,6 +52,8 @@ def parse_args(args=None):
       help='export entries published after this date')
     parser.add_argument('--reverse', action="store_true",
       help="display in reverse chronological order")
+    parser.add_argument('--digest', action="store_true",
+      help="display yesterday, one week ago, one month ago, and one year ago")
     parser.add_argument('--autobold', action="store_true",
       help="autobold first lines (titles) of posts")
     parser.add_argument('--nl2br', action="store_true",
@@ -99,7 +101,7 @@ def run(args=None):
     generator = dayone_export(args.journal, template=args.template,
         reverse=args.reverse, tags=tags, exclude=excluded_tags,
         after=args.after, format=args.format, template_dir=args.template_dir,
-        autobold=args.autobold, nl2br=args.nl2br, filename_template=args.output)
+        autobold=args.autobold, nl2br=args.nl2br, filename_template=args.output, digest=args.digest)
 
     try:
 

@@ -15,6 +15,7 @@ import jinja2
 import plistlib
 import os
 import pytz
+import datetime as dt
 from collections import defaultdict
 
 
@@ -260,10 +261,55 @@ def _filter_by_after_date(journal, date):
 
     :param date: A naive datetime representing a UTC time"""
     return [item for item in journal if item['Creation Date'] > date]
+    
+def _filter_digest(journal):
+    """return a list of entries for one date, one week ago, one month ago and one year before today."""
+    
+    dates = _date_list()
+    return [item for item in journal if item['Date'].date() in dates]
+
+def _subtract_one_month(date0):
+    '''Returns a date that is one month prior to date0. Days that lack a correlate due to a shorter previous month return the last day of the previous month
+    
+    :param date0: A date'''
+    date1 = date0.replace(day=1)
+    date2 = date1 - dt.timedelta(days=1)
+    try:
+        date3 = date2.replace(day=date0.day)
+    except:
+        date3 = date2
+    return date3
+    
+def _add_years(d, years):
+    """Return a date that's `years` years after the date (or datetime)
+    object `d`. Return the same calendar date (month and day) in the
+    destination year, if it exists, otherwise use the following day
+    (thus changing February 29 to March 1).
+
+    :param d: A date
+    :param years: int
+    """
+    try:
+        return d.replace(year = d.year + years)
+    except ValueError:
+        return d + (dt.date(d.year + years, 1, 1) - dt.date(d.year, 1, 1))
+
+def _date_list():
+    '''Return a list of the dates for yesterday, a week ago, a month ago, 
+    and a year ago. If the exact day isn't found, it adjusts appropriately
+    as detailed in the functions above.
+    '''
+    today = dt.date.today()
+    yesterday = today - dt.timedelta(days=1)
+    one_week_ago = today - dt.timedelta(weeks=1)
+    one_month_ago = _subtract_one_month(today)
+    one_year_ago = _add_years(today, -1)
+    date_list = [yesterday, one_week_ago, one_month_ago, one_year_ago]
+    return date_list
 
 def dayone_export(dayone_folder, template=None, reverse=False, tags=None,
     exclude=None, after=None, format=None, template_dir=None, autobold=False,
-    nl2br=False, filename_template=""):
+    nl2br=False, filename_template="", digest=False):
     """Render a template using entries from a Day One journal.
 
     :param dayone_folder: Name of Day One folder; generally ends in ``.dayone``.
@@ -302,6 +348,7 @@ def dayone_export(dayone_folder, template=None, reverse=False, tags=None,
                 Each time the result of formatting an entry's timestamp with this changes,
                 a new result will be returned.
     :returns: Iterator yielding (filename, filled_in_template) as strings on each iteration.
+    :param digest: If true, only entries one day, one week, one month, and one year in the past are included.
     """
 
     # figure out which template to use
@@ -333,6 +380,8 @@ def dayone_export(dayone_folder, template=None, reverse=False, tags=None,
     j = parse_journal(dayone_folder)
 
     # filter and manipulate based on options
+    if digest is not None:
+        j = _filter_digest(j)
     if after is not None:
         if after.tzinfo is None:
             # set timezone to mirror last journal entry
